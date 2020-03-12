@@ -22,9 +22,7 @@ import brave.propagation.w3c.TraceContextPropagation.Extra;
 import java.util.Collections;
 import java.util.List;
 
-import static brave.propagation.w3c.TraceparentFormat.FORMAT_LENGTH;
-import static brave.propagation.w3c.TraceparentFormat.maybeExtractParent;
-import static brave.propagation.w3c.TraceparentFormat.validateFormat;
+import static brave.propagation.w3c.TraceparentFormat.parseTraceparentFormat;
 
 final class TraceContextExtractor<C, K> implements Extractor<C> {
   final Getter<C, K> getter;
@@ -57,9 +55,9 @@ final class TraceContextExtractor<C, K> implements Extractor<C> {
     if (handler.context == null) {
       if (extra == DEFAULT_EXTRA) return EMPTY;
       return TraceContextOrSamplingFlags.newBuilder()
-          .extra(extra)
-          .samplingFlags(SamplingFlags.EMPTY)
-          .build();
+        .extra(extra)
+        .samplingFlags(SamplingFlags.EMPTY)
+        .build();
     }
     return TraceContextOrSamplingFlags.newBuilder().context(handler.context).extra(extra).build();
   }
@@ -67,12 +65,10 @@ final class TraceContextExtractor<C, K> implements Extractor<C> {
   static final class TraceparentFormatHandler implements TracestateFormat.Handler {
     TraceContext context;
 
-    @Override public boolean onThisState(CharSequence tracestateString, int pos) {
-      if (validateFormat(tracestateString, pos) < FORMAT_LENGTH) {
-        return false;
-      }
-      context = maybeExtractParent(tracestateString, pos);
-      return true;
+    @Override
+    public boolean onThisState(CharSequence tracestateString, int beginIndex, int endIndex) {
+      context = parseTraceparentFormat(tracestateString, beginIndex, endIndex);
+      return context != null;
     }
   }
 
@@ -81,5 +77,5 @@ final class TraceContextExtractor<C, K> implements Extractor<C> {
 
   static final List<Object> DEFAULT_EXTRA = Collections.singletonList(MARKER);
   static final TraceContextOrSamplingFlags EMPTY =
-      TraceContextOrSamplingFlags.EMPTY.toBuilder().extra(DEFAULT_EXTRA).build();
+    TraceContextOrSamplingFlags.EMPTY.toBuilder().extra(DEFAULT_EXTRA).build();
 }
