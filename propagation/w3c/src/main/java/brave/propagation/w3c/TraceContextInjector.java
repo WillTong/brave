@@ -18,6 +18,7 @@ import brave.propagation.TraceContext;
 import brave.propagation.TraceContext.Injector;
 import brave.propagation.w3c.TraceContextPropagation.Extra;
 
+import static brave.propagation.B3SingleFormat.writeB3SingleFormat;
 import static brave.propagation.w3c.TraceparentFormat.writeTraceparentFormat;
 
 final class TraceContextInjector<C, K> implements Injector<C> {
@@ -33,19 +34,19 @@ final class TraceContextInjector<C, K> implements Injector<C> {
   }
 
   @Override public void inject(TraceContext traceContext, C carrier) {
-    String thisState = writeTraceparentFormat(traceContext);
-    setter.put(carrier, traceparentKey, thisState);
+
+    setter.put(carrier, traceparentKey, writeTraceparentFormat(traceContext));
 
     CharSequence otherState = null;
     for (int i = 0, length = traceContext.extra().size(); i < length; i++) {
       Object next = traceContext.extra().get(i);
       if (next instanceof Extra) {
-        otherState = ((Extra) next).otherState;
+        otherState = ((Extra) next).otherEntries;
         break;
       }
     }
 
-    String tracestate = tracestateFormat.write(thisState, otherState);
+    String tracestate = tracestateFormat.write(writeB3SingleFormat(traceContext), otherState);
     setter.put(carrier, tracestateKey, tracestate);
   }
 }

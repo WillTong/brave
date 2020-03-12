@@ -146,21 +146,24 @@ public final class B3SingleFormat {
   @Nullable
   public static TraceContextOrSamplingFlags parseB3SingleFormat(CharSequence b3, int beginIndex,
     int endIndex) {
-    if (beginIndex == endIndex) {
+    int length = endIndex - beginIndex;
+
+    if (length == 0) {
       Platform.get().log("Invalid input: empty", null);
       return null;
     }
 
-    int pos = beginIndex;
-    if (pos + 1 == endIndex) { // possibly sampling flags
-      return tryParseSamplingFlags(b3, pos);
+    if (length == 1) { // possibly sampling flags
+      return tryParseSamplingFlags(b3, beginIndex);
     }
 
+    int pos = beginIndex;
+
     // At this point we minimally expect a traceId-spanId pair
-    if (endIndex < 16 + 1 + 16 /* traceid64-spanid */) {
+    if (length < 16 + 1 + 16 /* traceid64-spanid */) {
       Platform.get().log("Invalid input: truncated", null);
       return null;
-    } else if (endIndex > FORMAT_MAX_LENGTH) {
+    } else if (length > FORMAT_MAX_LENGTH) {
       Platform.get().log("Invalid input: too long", null);
       return null;
     }

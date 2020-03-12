@@ -42,32 +42,33 @@ public class TraceContextPropagationTest {
           .sampled(true)
           .build();
   String validTraceparent = "00-67891233abcdef012345678912345678-463ac35c9f6413ad-01";
+  String validB3Single = "67891233abcdef012345678912345678-463ac35c9f6413ad-1";
   String otherState = "congo=lZWRzIHRoNhcm5hbCBwbGVhc3VyZS4=";
 
-  @Test public void injects_tc_when_no_other_tracestate() {
+  @Test public void injects_b3_when_no_other_tracestate() {
     Extra extra = new Extra();
 
     sampledContext = sampledContext.toBuilder().extra(asList(extra)).build();
 
     injector.inject(sampledContext, carrier);
 
-    assertThat(carrier).containsEntry("tracestate", "b3=" + validTraceparent);
+    assertThat(carrier).containsEntry("tracestate", "b3=" + validB3Single);
   }
 
-  @Test public void injects_tc_before_other_tracestate() {
+  @Test public void injects_b3_before_other_tracestate() {
     Extra extra = new Extra();
-    extra.otherState = otherState;
+    extra.otherEntries = otherState;
 
     sampledContext = sampledContext.toBuilder().extra(asList(extra)).build();
 
     injector.inject(sampledContext, carrier);
 
-    assertThat(carrier).containsEntry("tracestate", "b3=" + validTraceparent + "," + otherState);
+    assertThat(carrier).containsEntry("tracestate", "b3=" + validB3Single + "," + otherState);
   }
 
-  @Test public void extracts_tc_when_no_other_tracestate() {
+  @Test public void extracts_b3_when_no_other_tracestate() {
     carrier.put("traceparent", validTraceparent);
-    carrier.put("tracestate", "b3=" + validTraceparent);
+    carrier.put("tracestate", "b3=" + validB3Single);
 
     assertThat(extractor.extract(carrier))
         .isEqualTo(
@@ -77,12 +78,12 @@ public class TraceContextPropagationTest {
                 .build());
   }
 
-  @Test public void extracts_tc_before_other_tracestate() {
+  @Test public void extracts_b3_before_other_tracestate() {
     carrier.put("traceparent", validTraceparent);
-    carrier.put("tracestate", "b3=" + validTraceparent + "," + otherState);
+    carrier.put("tracestate", "b3=" + validB3Single + "," + otherState);
 
     Extra extra = new Extra();
-    extra.otherState = otherState;
+    extra.otherEntries = otherState;
 
     assertThat(extractor.extract(carrier))
         .isEqualTo(
@@ -92,12 +93,12 @@ public class TraceContextPropagationTest {
                 .build());
   }
 
-  @Test public void extracts_tc_after_other_tracestate() {
+  @Test public void extracts_b3_after_other_tracestate() {
     carrier.put("traceparent", validTraceparent);
-    carrier.put("tracestate", otherState + ",b3=" + validTraceparent);
+    carrier.put("tracestate", otherState + ",b3=" + validB3Single);
 
     Extra extra = new Extra();
-    extra.otherState = otherState;
+    extra.otherEntries = otherState;
 
     assertThat(extractor.extract(carrier))
         .isEqualTo(

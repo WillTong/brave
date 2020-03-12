@@ -79,14 +79,16 @@ public final class TraceContextPropagation<K> implements Propagation<K> {
     return new TraceContextExtractor<>(this, getter);
   }
 
-  // TODO: this probably needs to carry more state than the upstream at some point, eventhough we
-  // can start with pass-through integration.
+  /**
+   * This only contains other entries. The entry for the current trace is only written during
+   * injection.
+   */
   static final class Extra { // hidden intentionally
-    CharSequence otherState;
+    CharSequence otherEntries;
 
     @Override public String toString() {
       return "TracestatePropagation{"
-        + (otherState != null ? ("fields=" + otherState.toString()) : "")
+        + (otherEntries != null ? ("entries=" + otherEntries.toString()) : "")
         + "}";
     }
   }

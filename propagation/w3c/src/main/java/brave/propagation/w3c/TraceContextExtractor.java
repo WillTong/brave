@@ -22,7 +22,7 @@ import brave.propagation.w3c.TraceContextPropagation.Extra;
 import java.util.Collections;
 import java.util.List;
 
-import static brave.propagation.w3c.TraceparentFormat.parseTraceparentFormat;
+import static brave.propagation.B3SingleFormat.parseB3SingleFormat;
 
 final class TraceContextExtractor<C, K> implements Extractor<C> {
   final Getter<C, K> getter;
@@ -37,37 +37,39 @@ final class TraceContextExtractor<C, K> implements Extractor<C> {
 
   @Override public TraceContextOrSamplingFlags extract(C carrier) {
     if (carrier == null) throw new NullPointerException("carrier == null");
-    String tracestateString = getter.get(carrier, tracestateKey);
-    if (tracestateString == null) return EMPTY;
+    String value = getter.get(carrier, tracestateKey);
+    if (value == null) return EMPTY;
 
-    TraceparentFormatHandler handler = new TraceparentFormatHandler();
-    CharSequence otherState = tracestateFormat.parseAndReturnOtherState(tracestateString, handler);
+    B3SingleFormatHandler handler = new B3SingleFormatHandler();
+    CharSequence otherEntries = tracestateFormat.parseAndReturnOtherEntries(value, handler);
 
     List<Object> extra;
-    if (otherState == null) {
+    if (otherEntries == null) {
       extra = DEFAULT_EXTRA;
     } else {
       Extra e = new Extra();
-      e.otherState = otherState;
+      e.otherEntries = otherEntries;
       extra = Collections.singletonList(e);
     }
 
-    if (handler.context == null) {
+    TraceContext context = handler.context;
+    if (context == null) {
       if (extra == DEFAULT_EXTRA) return EMPTY;
       return TraceContextOrSamplingFlags.newBuilder()
         .extra(extra)
         .samplingFlags(SamplingFlags.EMPTY)
         .build();
     }
-    return TraceContextOrSamplingFlags.newBuilder().context(handler.context).extra(extra).build();
+    return TraceContextOrSamplingFlags.newBuilder().context(context).extra(extra).build();
   }
 
-  static final class TraceparentFormatHandler implements TracestateFormat.Handler {
+  static final class B3SingleFormatHandler implements TracestateFormat.Handler {
     TraceContext context;
 
     @Override
-    public boolean onThisState(CharSequence tracestateString, int beginIndex, int endIndex) {
-      context = parseTraceparentFormat(tracestateString, beginIndex, endIndex);
+    public boolean onThisEntry(CharSequence tracestate, int beginIndex, int endIndex) {
+      TraceContextOrSamplingFlags extracted = parseB3SingleFormat(tracestate, beginIndex, endIndex);
+      if (extracted != null) context = extracted.context();
       return context != null;
     }
   }
